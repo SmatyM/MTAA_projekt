@@ -1,9 +1,16 @@
 //const cors = require('cors');
 //app.use(cors()); // Povolí všetky žiadosti z frontendu
 
+const { errorHandler, trackRequest } = require('./middleware/firebaseMiddleware');
+const locationService = require('./services/locationService');
+
+
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
+
+
 
 // Middleware
 app.use(bodyParser.json());
@@ -26,5 +33,12 @@ app.use('/api/images', imageRoutes);
 const roleRoutes = require('./routes/roles');
 // ...
 app.use('/api/roles', roleRoutes);
+
+const trackingRoutes = require('./routes/trackingRoutes');
+app.use('/api/tracking', trackingRoutes);
+
+app.use(trackRequest);
+
+app.use(errorHandler);
 
 module.exports = app;
