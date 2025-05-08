@@ -10,7 +10,7 @@ const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY; // Add this to your .env
 
 // Registrácia
 router.post('/register', async (req, res) => {
-  const { email, password, role } = req.body;
+  const { email, password, role, first_name, last_name } = req.body;
   try {
     // 1. Create user in Firebase
     let firebaseUser;
@@ -35,7 +35,9 @@ router.post('/register', async (req, res) => {
       email,
       password: hashedPassword,
       role,
-      firebaseUid: firebaseUser.uid
+      firebaseUid: firebaseUser.uid,
+      first_name,
+      last_name
     });
 
     res.status(201).json({ user, firebaseUid: firebaseUser.uid });

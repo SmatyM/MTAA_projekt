@@ -53,6 +53,8 @@ export default function Register() {
           email,
           password,
           role: isTrainer ? 'trainer' : 'user',
+          first_name: firstName,
+          last_name: lastName,
         }),
       });
       if (response.ok) {

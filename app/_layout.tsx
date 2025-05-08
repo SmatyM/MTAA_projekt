@@ -11,3 +11,5 @@ export default function Layout() {
     </ThemeProvider>
   );
 }
+
+// TODO: Pridať route pre 'trainers' a 'chat' do expo-router, ak používate file-based routing

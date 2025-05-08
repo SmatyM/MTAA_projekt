@@ -13,6 +13,11 @@ module.exports = (sequelize) => {
     receiver_id: {
       type: DataTypes.INTEGER,
       allowNull: false
+    },
+    seen: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'false'
     }
   }, {
     tableName: 'messages',

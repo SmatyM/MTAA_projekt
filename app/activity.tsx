@@ -1,9 +1,13 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useTheme } from './config/ThemeContext';
+import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from './config/api';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 
 export default function Activity() {
   const router = useRouter();
@@ -33,57 +37,244 @@ export default function Activity() {
         white: '#fff',
       };
 
+  // Tracking state
+  const [tracking, setTracking] = useState(false);
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [locations, setLocations] = useState<{ latitude: number; longitude: number }[]>([]);
+  const [loading, setLoading] = useState(false);
+  const locationSubscription = useRef<Location.LocationSubscription | null>(null);
+  const [workoutResult, setWorkoutResult] = useState<any>(null);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [elapsed, setElapsed] = useState(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
   // Placeholder stats
-  const runningTime = '01:09:44';
-  const distance = '10,9 km';
-  const kcal = '539 kcal';
-  const speed = '12,3 km/h';
+  const runningTime = tracking
+    ? formatDuration(elapsed)
+    : workoutResult
+      ? formatDuration(workoutResult.duration)
+      : '00:00:00';
+  const distance = workoutResult ? `${workoutResult.distance.toFixed(2)} km` : `${(locations.length > 1 ? calcDistance(locations).toFixed(2) : '0.00')} km`;
+  const kcal = workoutResult ? `${(workoutResult.distance * 49.5).toFixed(0)} kcal` : `${(calcDistance(locations) * 49.5).toFixed(0)} kcal`;
+  const speed = workoutResult ? `${workoutResult.speed.toFixed(2)} km/h` : (locations.length > 1 ? `${(calcSpeed(locations)).toFixed(2)} km/h` : '0.00 km/h');
+
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission to access location was denied');
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({});
+      setLocation(loc);
+    })();
+    return () => {
+      if (locationSubscription.current) locationSubscription.current.remove();
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
+  // Start tracking
+  const handleStart = async () => {
+    setLoading(true);
+    setWorkoutResult(null);
+    try {
+      const token = await AsyncStorage.getItem('firebaseToken');
+      const res = await fetch(`${API_URL}/tracking/start`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to start tracking');
+      setLocations([]);
+      setStartTime(Date.now());
+      setTracking(true);
+      // Start location updates
+      locationSubscription.current = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.Highest, timeInterval: 1000, distanceInterval: 1 },
+        async (loc) => {
+          setLocation(loc);
+          setLocations((prev) => [...prev, { latitude: loc.coords.latitude, longitude: loc.coords.longitude }]);
+          // Send to backend
+          const token = await AsyncStorage.getItem('firebaseToken');
+          await fetch(`${API_URL}/tracking/location`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ latitude: loc.coords.latitude, longitude: loc.coords.longitude }),
+          });
+        }
+      );
+    } catch (e) {
+      Alert.alert('Error', (e as Error).message);
+    }
+    setLoading(false);
+  };
+
+  // Timer effect
+  useEffect(() => {
+    if (tracking && startTime) {
+      timerRef.current = setInterval(() => {
+        setElapsed(Math.floor((Date.now() - startTime) / 1000));
+      }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      setElapsed(0);
+    }
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [tracking, startTime]);
+
+  // Stop tracking
+  const handleStop = async () => {
+    setLoading(true);
+    try {
+      if (locationSubscription.current) {
+        locationSubscription.current.remove();
+        locationSubscription.current = null;
+      }
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      const token = await AsyncStorage.getItem('firebaseToken');
+      const res = await fetch(`${API_URL}/tracking/stop`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error('Failed to stop tracking: ' + errText);
+      }
+      const data = await res.json();
+      setWorkoutResult(data);
+      setTracking(false);
+      setStartTime(null);
+      setElapsed(0);
+    } catch (e) {
+      Alert.alert('Error', (e as Error).message);
+    }
+    setLoading(false);
+  };
+
+  // Helper: format duration
+  function formatDuration(seconds: number) {
+    const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+    const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  }
+
+  // Helper: calculate distance in km
+  function calcDistance(coords: { latitude: number; longitude: number }[]) {
+    let d = 0;
+    for (let i = 1; i < coords.length; i++) {
+      d += getDistanceFromLatLonInKm(coords[i-1].latitude, coords[i-1].longitude, coords[i].latitude, coords[i].longitude);
+    }
+    return d;
+  }
+  // Helper: calculate speed in km/h
+  function calcSpeed(coords: { latitude: number; longitude: number }[]) {
+    if (coords.length < 2) return 0;
+    // Assume 2s interval
+    const totalSeconds = (coords.length - 1) * 2;
+    const dist = calcDistance(coords);
+    return (dist / (totalSeconds / 3600));
+  }
+  // Haversine formula
+  function getDistanceFromLatLonInKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+    const R = 6371; // Radius of the earth in km
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const d = R * c;
+    return d;
+  }
+  function deg2rad(deg: number) {
+    return deg * (Math.PI / 180);
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Map background placeholder */}
-      <View style={styles.mapContainer}>
-        <Image
-          source={{ uri: 'https://static-maps.yandex.ru/1.x/?ll=30.516667,50.433333&z=13&l=map&size=450,450' }}
-          style={styles.mapImage}
-          resizeMode="cover"
-        />
-        {/* Polyline placeholder (could use react-native-maps Polyline in real app) */}
-        <View style={[styles.polyline, { backgroundColor: colors.blue }]} />
-        {/* Top bar */}
-        <View style={styles.topBar}>
+      {/* Map background */}
+      <View style={{ flex: 1 }}>
+        {location && (
+          <MapView
+            style={StyleSheet.absoluteFill}
+            region={{
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+              latitudeDelta: 0.01,
+              longitudeDelta: 0.01,
+            }}
+          >
+            <Marker
+              coordinate={{
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude,
+              }}
+              title="You"
+            />
+            {locations.length > 1 && (
+              <Polyline
+                coordinates={locations}
+                strokeColor="#08C8F6"
+                strokeWidth={4}
+              />
+            )}
+          </MapView>
+        )}
+        {/* Overlay UI */}
+        <View style={[styles.topBar, { position: 'absolute', top: 24, left: 0, right: 0, zIndex: 10 }] }>
           <TouchableOpacity style={[styles.backButton, { backgroundColor: colors.card }]} onPress={() => router.back()}>
             <MaterialIcons name="arrow-back-ios" size={22} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.title, { color: colors.text }]}>Current running</Text>
-          <View style={[styles.gpsStatus, { backgroundColor: darkMode ? '#1B5E20' : '#E8F5E9' }]}>
+          <View style={[styles.gpsStatus, { backgroundColor: darkMode ? '#1B5E20' : '#E8F5E9' }] }>
             <MaterialCommunityIcons name="crosshairs-gps" size={18} color="#4CAF50" />
             <Text style={styles.gpsText}>GPS</Text>
           </View>
         </View>
-      </View>
-      {/* Bottom card */}
-      <View style={[styles.bottomCard, { backgroundColor: colors.card }]}>
-        <View style={styles.timeRow}>
-          <View>
-            <Text style={[styles.timeLabel, { color: colors.subtext }]}>Running time</Text>
-            <Text style={[styles.timeValue, { color: colors.text }]}>{runningTime}</Text>
+        <View style={[styles.bottomCard, { backgroundColor: colors.card, position: 'absolute', left: 16, right: 16, bottom: 80, zIndex: 10 }] }>
+          <View style={styles.timeRow}>
+            <View>
+              <Text style={[styles.timeLabel, { color: colors.subtext }]}>Running time</Text>
+              <Text style={[styles.timeValue, { color: colors.text }]}>{runningTime}</Text>
+            </View>
+            {loading ? (
+              <ActivityIndicator color={colors.blue} />
+            ) : tracking ? (
+              <TouchableOpacity style={styles.pauseButton} onPress={handleStop}>
+                <MaterialCommunityIcons name="stop" size={28} color="#fff" />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.pauseButton} onPress={handleStart}>
+                <MaterialCommunityIcons name="play" size={28} color="#fff" />
+              </TouchableOpacity>
+            )}
           </View>
-          <TouchableOpacity style={styles.pauseButton}>
-            <MaterialCommunityIcons name="pause" size={28} color="#fff" />
-          </TouchableOpacity>
+          <View style={styles.statsRow}>
+            <View style={styles.statBox}>
+              <Text style={[styles.statValue, { color: colors.text }]}>{distance}</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={[styles.statValue, { color: colors.text }]}>{kcal}</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={[styles.statValue, { color: colors.text }]}>{speed}</Text>
+            </View>
+          </View>
         </View>
-        <View style={styles.statsRow}>
-          <View style={styles.statBox}>
-            <Text style={[styles.statValue, { color: colors.text }]}>{distance}</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={[styles.statValue, { color: colors.text }]}>{kcal}</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={[styles.statValue, { color: colors.text }]}>{speed}</Text>
-          </View>
-        </View>
+        <Text style={{color: colors.text, position: 'absolute', top: 80, left: 16, zIndex: 10}}>Points: {locations.length}</Text>
       </View>
       {/* Bottom Navigation Bar */}
       <View style={[styles.bottomNav, { backgroundColor: colors.card }] }>

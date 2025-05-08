@@ -1,6 +1,6 @@
 const geolib = require('geolib');
 const { getFirestore } = require('firebase-admin/firestore');
-const { db } = require('../config/firebase');
+const { db, admin } = require('../config/firebase');
 
 class LocationService {
     constructor() {
@@ -20,8 +20,8 @@ class LocationService {
         this.locations.push({ latitude, longitude, timestamp });
     }
 
-    stopTracking(userId) {
-        if (this.locations.length < 2) {
+    async stopTracking(userId) {
+        if (this.locations.length < 0) {
             throw new Error('Not enough data points to calculate metrics');
         }
 
@@ -31,7 +31,7 @@ class LocationService {
         const speed = distance / (duration / 3600); // km/h
 
         // Save to Firebase
-        this.saveWorkout(userId, {
+        await this.saveWorkout(userId, {
             distance,
             duration,
             speed,

@@ -34,8 +34,17 @@ const roleRoutes = require('./routes/roles');
 // ...
 app.use('/api/roles', roleRoutes);
 
+const trainersRoutes = require('./routes/trainers');
+app.use('/api/trainers', trainersRoutes);
+
 const trackingRoutes = require('./routes/trackingRoutes');
 app.use('/api/tracking', trackingRoutes);
+
+const chatRoutes = require('./routes/chat');
+app.use('/api/chat', chatRoutes);
+
+const userRoutes = require('./routes/user');
+app.use('/api/user', userRoutes);
 
 app.use(trackRequest);
 

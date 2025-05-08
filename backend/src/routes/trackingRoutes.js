@@ -60,7 +60,7 @@ router.post('/location', (req, res) => {
 
 router.post('/stop', async (req, res) => {
     try {
-        const metrics = await locationService.stopTracking(req.user.id); // Teraz req.user bude existovať
+        const metrics = await locationService.stopTracking(req.user.id);
         res.status(200).json(metrics);
     } catch (error) {
         res.status(400).json({ error: error.message });

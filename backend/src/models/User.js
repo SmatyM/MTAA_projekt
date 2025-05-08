@@ -57,6 +57,14 @@ module.exports = (sequelize) => {
       unique: true,
       allowNull: false,
       field: 'firebase_uid'
+    },
+    first_name: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    last_name: {
+      type: DataTypes.STRING,
+      allowNull: true
     }
   }, {
     tableName: 'users',
