@@ -5,6 +5,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useTheme } from './config/ThemeContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from './config/api';
 
 // This will be provided by backend later
 const isTrainer = true; // Change to true to see trainer view
@@ -12,6 +14,12 @@ const isTrainer = true; // Change to true to see trainer view
 export default function Profile() {
   const router = useRouter();
   const { darkMode, setDarkMode } = useTheme();
+
+  // State for profile fields
+  const [height, setHeight] = React.useState('');
+  const [weight, setWeight] = React.useState('');
+  const [dateOfBirth, setDateOfBirth] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
 
   const colors = darkMode
     ? {
@@ -35,6 +43,35 @@ export default function Profile() {
         divider: '#E0E0E0',
       };
 
+  // Save profile handler
+  const handleSaveProfile = async () => {
+    setLoading(true);
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch(`${API_URL}/user/me`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          height: height ? parseFloat(height) : null,
+          weight: weight ? parseFloat(weight) : null,
+          date_of_birth: dateOfBirth || null,
+        }),
+      });
+      if (res.ok) {
+        alert('Profile saved!');
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to save profile');
+      }
+    } catch (err) {
+      alert('Network error');
+    }
+    setLoading(false);
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -51,8 +88,11 @@ export default function Profile() {
           <TextInput
             mode="flat"
             style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text }]}
-            placeholder="Choose Gender"
+            placeholder="Height"
             placeholderTextColor={colors.subtext}
+            value={height}
+            onChangeText={setHeight}
+            keyboardType="numeric"
             underlineColor="transparent"
             theme={{ colors: { background: colors.inputBg, text: colors.text } }}
             right={<TextInput.Icon icon={() => <Text style={[styles.inputUnit, { color: colors.blue }]}>CM</Text>} />}
@@ -63,8 +103,10 @@ export default function Profile() {
           <TextInput
             mode="flat"
             style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text }]}
-            placeholder="Date of Birth"
+            placeholder="Date of Birth (YYYY-MM-DD)"
             placeholderTextColor={colors.subtext}
+            value={dateOfBirth}
+            onChangeText={setDateOfBirth}
             underlineColor="transparent"
             theme={{ colors: { background: colors.inputBg, text: colors.text } }}
           />
@@ -76,11 +118,25 @@ export default function Profile() {
             style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text }]}
             placeholder="Your Weight"
             placeholderTextColor={colors.subtext}
+            value={weight}
+            onChangeText={setWeight}
+            keyboardType="numeric"
             underlineColor="transparent"
             theme={{ colors: { background: colors.inputBg, text: colors.text } }}
             right={<TextInput.Icon icon={() => <Text style={[styles.inputUnit, { color: colors.blue }]}>KG</Text>} />}
           />
         </View>
+        {/* Save Button */}
+        <TouchableOpacity style={{ marginTop: 10, alignSelf: 'flex-start', opacity: loading ? 0.7 : 1 }} onPress={handleSaveProfile} disabled={loading}>
+          <LinearGradient
+            colors={[colors.blue, '#1A1A2E']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.gradientButton}
+          >
+            <Text style={styles.buttonText}>{loading ? 'Saving...' : 'Save'}</Text>
+          </LinearGradient>
+        </TouchableOpacity>
         {/* Dark Mode Toggle */}
         <Text style={[styles.sectionLabel, { color: colors.subtext }]}>Dark Mode</Text>
         <View style={styles.switchRow}>

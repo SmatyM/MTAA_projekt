@@ -65,6 +65,18 @@ module.exports = (sequelize) => {
     last_name: {
       type: DataTypes.STRING,
       allowNull: true
+    },
+    height: {
+      type: DataTypes.FLOAT,
+      allowNull: true
+    },
+    weight: {
+      type: DataTypes.FLOAT,
+      allowNull: true
+    },
+    date_of_birth: {
+      type: DataTypes.DATEONLY,
+      allowNull: true
     }
   }, {
     tableName: 'users',
