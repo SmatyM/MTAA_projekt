@@ -14,11 +14,15 @@ export default function Settings() {
   const { user, refreshUser } = useUser();
   const [stepsGoal, setStepsGoal] = React.useState(user?.daily_steps_goal ? String(user.daily_steps_goal) : '');
   const [distanceGoal, setDistanceGoal] = React.useState(user?.daily_distance_goal ? String(user.daily_distance_goal) : '');
+  const [firstName, setFirstName] = React.useState(user?.first_name || '');
+  const [lastName, setLastName] = React.useState(user?.last_name || '');
   const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
     setStepsGoal(user?.daily_steps_goal ? String(user.daily_steps_goal) : '');
     setDistanceGoal(user?.daily_distance_goal ? String(user.daily_distance_goal) : '');
+    setFirstName(user?.first_name || '');
+    setLastName(user?.last_name || '');
   }, [user]);
 
   const colors = darkMode
@@ -54,6 +58,8 @@ export default function Settings() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
+          first_name: firstName,
+          last_name: lastName,
           daily_steps_goal: stepsGoal ? parseInt(stepsGoal) : null,
           daily_distance_goal: distanceGoal ? parseFloat(distanceGoal) : null,
         }),
@@ -75,6 +81,32 @@ export default function Settings() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={[styles.container, { backgroundColor: colors.background }] }>
         <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
+        <View style={styles.inputRow}>
+          <Text style={[styles.label, { color: colors.text }]}>First Name</Text>
+          <TextInput
+            mode="flat"
+            style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text }]}
+            placeholder="First Name"
+            placeholderTextColor={colors.subtext}
+            value={firstName}
+            onChangeText={setFirstName}
+            underlineColor="transparent"
+            theme={{ colors: { background: colors.inputBg, text: colors.text } }}
+          />
+        </View>
+        <View style={styles.inputRow}>
+          <Text style={[styles.label, { color: colors.text }]}>Last Name</Text>
+          <TextInput
+            mode="flat"
+            style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text }]}
+            placeholder="Last Name"
+            placeholderTextColor={colors.subtext}
+            value={lastName}
+            onChangeText={setLastName}
+            underlineColor="transparent"
+            theme={{ colors: { background: colors.inputBg, text: colors.text } }}
+          />
+        </View>
         <View style={styles.inputRow}>
           <Text style={[styles.label, { color: colors.text }]}>Daily Steps Goal</Text>
           <TextInput
