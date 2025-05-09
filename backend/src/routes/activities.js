@@ -29,8 +29,22 @@ router.post('/', authenticateToken, async (req, res) => {
 
 // PUT aktualizácia aktivity
 router.put('/:id', async (req, res) => {
-  await Activity.update(req.body, { where: { id: req.params.id } });
-  res.json({ message: 'Activity updated' });
+  try {
+    console.log('PUT /activities/:id', req.params.id, req.body);
+    const updateData = {};
+    if (req.body.distance !== undefined) updateData.distance = req.body.distance;
+    if (req.body.duration !== undefined) updateData.duration = req.body.duration;
+    const [updated] = await Activity.update(updateData, { where: { id: req.params.id } });
+    console.log('Update result:', updated);
+    if (updated) {
+      res.json({ message: 'Activity updated' });
+    } else {
+      res.status(404).json({ error: 'Activity not found' });
+    }
+  } catch (err) {
+    console.error('Update error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 // DELETE aktivita

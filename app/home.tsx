@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Pressable, TextInput } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
@@ -60,6 +60,15 @@ export default function Home() {
   // Fetch workouts from backend
   const [savedWorkouts, setSavedWorkouts] = React.useState<any[]>([]);
   const [loadingWorkouts, setLoadingWorkouts] = React.useState(false);
+  const [showAllWorkouts, setShowAllWorkouts] = React.useState(false);
+  const [modalVisible, setModalVisible] = React.useState(false);
+  const [selectedActivity, setSelectedActivity] = React.useState<any>(null);
+  const [editMode, setEditMode] = React.useState(false);
+  const [editDistance, setEditDistance] = React.useState('');
+  const [editDuration, setEditDuration] = React.useState('');
+  const [editTime, setEditTime] = React.useState('');
+  const [modalLoading, setModalLoading] = React.useState(false);
+
   React.useEffect(() => {
     const fetchWorkouts = async () => {
       setLoadingWorkouts(true);
@@ -102,6 +111,71 @@ export default function Home() {
   const todaySteps = Math.round((todayDistanceKm * 1000) / 0.78);
   const stepsGoal = user?.daily_steps_goal || 5971;
   const stepsPercent = todaySteps / stepsGoal;
+
+  const openActivityModal = (activity: any) => {
+    setSelectedActivity(activity);
+    setEditMode(false);
+    setModalVisible(true);
+  };
+
+  const handleRemoveActivity = async () => {
+    if (!selectedActivity) return;
+    setModalLoading(true);
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch(`${API_URL}/activities/${selectedActivity.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setSavedWorkouts((prev) => prev.filter((w) => w.id !== selectedActivity.id));
+        setModalVisible(false);
+      } else {
+        alert('Failed to remove activity');
+      }
+    } catch (err) {
+      alert('Network error');
+    }
+    setModalLoading(false);
+  };
+
+  const handleEditActivity = () => {
+    if (!selectedActivity) return;
+    setEditDistance(selectedActivity.distance ? String(selectedActivity.distance) : '');
+    setEditDuration(selectedActivity.duration ? String(selectedActivity.duration) : '');
+    setEditMode(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedActivity) return;
+    setModalLoading(true);
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch(`${API_URL}/activities/${selectedActivity.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          distance: editDistance ? parseFloat(editDistance) : undefined,
+          duration: editDuration ? parseInt(editDuration) : undefined,
+          startTime: editTime ? new Date(editTime).toISOString() : undefined,
+        }),
+      });
+      if (res.ok) {
+        // Update in UI
+        setSavedWorkouts((prev) => prev.map((w) =>
+          w.id === selectedActivity.id
+            ? { ...w, distance: parseFloat(editDistance), duration: parseInt(editDuration), startTime: new Date(editTime) }
+            : w
+        ));
+        setModalVisible(false);
+      } else {
+        alert('Failed to update activity');
+      }
+    } catch (err) {
+      alert('Network error');
+    }
+    setModalLoading(false);
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -189,49 +263,61 @@ export default function Home() {
           </View>
 
           {/* Latest Workout */}
-          <View style={styles.latestWorkoutHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Latest Workout</Text>
-            <TouchableOpacity>
-              <Text style={[styles.seeMore, { color: colors.blue }]}>See more</Text>
-            </TouchableOpacity>
-          </View>
-          {workouts.map((w, i) => (
-            <View key={i} style={[styles.workoutCard, { backgroundColor: colors.white }] }>
-              <View style={[styles.workoutIcon, { backgroundColor: colors.card }] }>
-                <MaterialCommunityIcons name="run" size={28} color={colors.blue} />
+          {!showAllWorkouts && (
+            <>
+              <View style={styles.latestWorkoutHeader}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Latest Workout</Text>
+                <TouchableOpacity onPress={() => setShowAllWorkouts(true)}>
+                  <Text style={[styles.seeMore, { color: colors.blue }]}>See more</Text>
+                </TouchableOpacity>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.workoutType, { color: colors.text }]}>{w.type}</Text>
-                <Text style={[styles.workoutMeta, { color: colors.subtext }]}>{w.calories} Calories Burn | {w.duration}minutes</Text>
-                <View style={[styles.workoutProgressBarBg, { backgroundColor: colors.divider }] }>
-                  <View style={[styles.workoutProgressBar, { width: `${w.progress * 100}%`, backgroundColor: colors.blue }]} />
+              {savedWorkouts.slice(0, 2).map((w, i) => (
+                <View key={w.id || i} style={[styles.workoutCard, { backgroundColor: colors.white }] }>
+                  <View style={[styles.workoutIcon, { backgroundColor: colors.card }] }>
+                    <MaterialCommunityIcons name="run" size={28} color={colors.blue} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.workoutType, { color: colors.text }]}>Run</Text>
+                    <Text style={[styles.workoutMeta, { color: colors.subtext }]}>Distance: {w.distance?.toFixed(2) || 0} km | Duration: {formatDuration(w.duration)} | Kcal: {(w.distance * 49.5).toFixed(0)} kcal</Text>
+                    <Text style={[styles.workoutMeta, { color: colors.subtext }]}>Date: {w.startTime ? new Date(w.startTime._seconds ? w.startTime._seconds * 1000 : w.startTime).toLocaleString() : ''}</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => openActivityModal(w)}>
+                    <MaterialIcons name="more-horiz" size={22} color={colors.icon} />
+                  </TouchableOpacity>
                 </View>
+              ))}
+            </>
+          )}
+          {showAllWorkouts && (
+            <>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24 }}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>All Saved Workouts</Text>
+                <TouchableOpacity onPress={() => setShowAllWorkouts(false)}>
+                  <Text style={[styles.seeMore, { color: colors.blue }]}>Hide</Text>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity>
-                <MaterialIcons name="more-horiz" size={22} color={colors.icon} />
-              </TouchableOpacity>
-            </View>
-          ))}
-
-          {/* All Saved Workouts from Firestore */}
-          <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>All Saved Workouts</Text>
-          {loadingWorkouts ? (
-            <Text style={{ color: colors.text, marginVertical: 8 }}>Loading...</Text>
-          ) : savedWorkouts.length === 0 ? (
-            <Text style={{ color: colors.subtext, marginVertical: 8 }}>No workouts found.</Text>
-          ) : (
-            savedWorkouts.map((w, i) => (
-              <View key={w.id || i} style={[styles.workoutCard, { backgroundColor: colors.white }] }>
-                <View style={[styles.workoutIcon, { backgroundColor: colors.card }] }>
-                  <MaterialCommunityIcons name="run" size={28} color={colors.blue} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.workoutType, { color: colors.text }]}>Run</Text>
-                  <Text style={[styles.workoutMeta, { color: colors.subtext }]}>Distance: {w.distance?.toFixed(2) || 0} km | Duration: {formatDuration(w.duration)} | Kcal: {(w.distance * 49.5).toFixed(0)} kcal</Text>
-                  <Text style={[styles.workoutMeta, { color: colors.subtext }]}>Date: {w.startTime ? new Date(w.startTime._seconds ? w.startTime._seconds * 1000 : w.startTime).toLocaleString() : ''}</Text>
-                </View>
-              </View>
-            ))
+              {loadingWorkouts ? (
+                <Text style={{ color: colors.text, marginVertical: 8 }}>Loading...</Text>
+              ) : savedWorkouts.length === 0 ? (
+                <Text style={{ color: colors.subtext, marginVertical: 8 }}>No workouts found.</Text>
+              ) : (
+                savedWorkouts.map((w, i) => (
+                  <View key={w.id || i} style={[styles.workoutCard, { backgroundColor: colors.white }] }>
+                    <View style={[styles.workoutIcon, { backgroundColor: colors.card }] }>
+                      <MaterialCommunityIcons name="run" size={28} color={colors.blue} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.workoutType, { color: colors.text }]}>Run</Text>
+                      <Text style={[styles.workoutMeta, { color: colors.subtext }]}>Distance: {w.distance?.toFixed(2) || 0} km | Duration: {formatDuration(w.duration)} | Kcal: {(w.distance * 49.5).toFixed(0)} kcal</Text>
+                      <Text style={[styles.workoutMeta, { color: colors.subtext }]}>Date: {w.startTime ? new Date(w.startTime._seconds ? w.startTime._seconds * 1000 : w.startTime).toLocaleString() : ''}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => openActivityModal(w)}>
+                      <MaterialIcons name="more-horiz" size={22} color={colors.icon} />
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+            </>
           )}
         </View>
       </ScrollView>
@@ -253,6 +339,58 @@ export default function Home() {
           <MaterialCommunityIcons name="account-outline" size={28} color={colors.blue} />
         </TouchableOpacity>
       </View>
+      {/* Modal for activity actions */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: 320, maxWidth: '90%' }}>
+            {!editMode ? (
+              <>
+                <Text style={{ fontSize: 18, fontWeight: '700', marginBottom: 16 }}>Activity Options</Text>
+                <Pressable style={{ marginBottom: 16 }} onPress={handleEditActivity} disabled={modalLoading}>
+                  <Text style={{ color: '#08C8F6', fontSize: 16 }}>Edit</Text>
+                </Pressable>
+                <Pressable style={{ marginBottom: 16 }} onPress={handleRemoveActivity} disabled={modalLoading}>
+                  <Text style={{ color: 'red', fontSize: 16 }}>Remove</Text>
+                </Pressable>
+                <Pressable onPress={() => setModalVisible(false)}>
+                  <Text style={{ color: '#888', fontSize: 16 }}>Cancel</Text>
+                </Pressable>
+              </>
+            ) : (
+              <>
+                <Text style={{ fontSize: 18, fontWeight: '700', marginBottom: 16 }}>Edit Activity</Text>
+                <Text style={{ fontSize: 14, marginBottom: 4 }}>Distance (km)</Text>
+                <TextInput
+                  value={editDistance}
+                  onChangeText={setEditDistance}
+                  keyboardType="numeric"
+                  style={{ borderWidth: 1, borderColor: '#eee', borderRadius: 8, marginBottom: 12, padding: 8 }}
+                />
+                <Text style={{ fontSize: 14, marginBottom: 4 }}>Duration (seconds)</Text>
+                <TextInput
+                  value={editDuration}
+                  onChangeText={setEditDuration}
+                  keyboardType="numeric"
+                  style={{ borderWidth: 1, borderColor: '#eee', borderRadius: 8, marginBottom: 12, padding: 8 }}
+                />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Pressable onPress={handleSaveEdit} disabled={modalLoading} style={{ padding: 10 }}>
+                    <Text style={{ color: '#08C8F6', fontSize: 16 }}>Save</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setEditMode(false)} style={{ padding: 10 }}>
+                    <Text style={{ color: '#888', fontSize: 16 }}>Cancel</Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
