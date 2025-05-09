@@ -5,6 +5,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
 import { useRouter } from 'expo-router';
 import { useTheme } from './config/ThemeContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from './config/api';
 
 const BMI = 10.1;
 const steps = 92;
@@ -45,6 +47,28 @@ export default function Home() {
         divider: '#E0E0E0',
         white: '#fff',
       };
+
+  // Fetch workouts from backend
+  const [savedWorkouts, setSavedWorkouts] = React.useState<any[]>([]);
+  const [loadingWorkouts, setLoadingWorkouts] = React.useState(false);
+  React.useEffect(() => {
+    const fetchWorkouts = async () => {
+      setLoadingWorkouts(true);
+      try {
+        const token = await AsyncStorage.getItem('firebaseToken');
+        const res = await fetch(`${API_URL}/tracking/history`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error('Failed to fetch workouts');
+        const data = await res.json();
+        setSavedWorkouts(Array.isArray(data) ? data : []);
+      } catch (e) {
+        setSavedWorkouts([]);
+      }
+      setLoadingWorkouts(false);
+    };
+    fetchWorkouts();
+  }, []);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -153,6 +177,27 @@ export default function Home() {
               </TouchableOpacity>
             </View>
           ))}
+
+          {/* All Saved Workouts from Firestore */}
+          <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 24 }]}>All Saved Workouts</Text>
+          {loadingWorkouts ? (
+            <Text style={{ color: colors.text, marginVertical: 8 }}>Loading...</Text>
+          ) : savedWorkouts.length === 0 ? (
+            <Text style={{ color: colors.subtext, marginVertical: 8 }}>No workouts found.</Text>
+          ) : (
+            savedWorkouts.map((w, i) => (
+              <View key={w.id || i} style={[styles.workoutCard, { backgroundColor: colors.white }] }>
+                <View style={[styles.workoutIcon, { backgroundColor: colors.card }] }>
+                  <MaterialCommunityIcons name="run" size={28} color={colors.blue} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.workoutType, { color: colors.text }]}>Run</Text>
+                  <Text style={[styles.workoutMeta, { color: colors.subtext }]}>Distance: {w.distance?.toFixed(2) || 0} km | Duration: {formatDuration(w.duration)} | Kcal: {(w.distance * 49.5).toFixed(0)} kcal</Text>
+                  <Text style={[styles.workoutMeta, { color: colors.subtext }]}>Date: {w.startTime ? new Date(w.startTime._seconds ? w.startTime._seconds * 1000 : w.startTime).toLocaleString() : ''}</Text>
+                </View>
+              </View>
+            ))
+          )}
         </View>
       </ScrollView>
       {/* Bottom Navigation Bar */}
@@ -404,3 +449,12 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
 });
+
+// Helper for formatting duration
+function formatDuration(seconds: number) {
+  if (!seconds) return '00:00:00';
+  const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+  const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+  const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+  return `${h}:${m}:${s}`;
+}
