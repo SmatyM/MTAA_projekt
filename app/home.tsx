@@ -79,6 +79,29 @@ export default function Home() {
     fetchWorkouts();
   }, []);
 
+  // Calculate today's steps from activities
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10); // 'YYYY-MM-DD'
+  let todayDistanceKm = 0;
+  if (Array.isArray(savedWorkouts)) {
+    todayDistanceKm = savedWorkouts
+      .filter(w => {
+        // Try to get date string from startTime (Firestore or Date)
+        let dateStr = '';
+        if (w.startTime?._seconds) {
+          const d = new Date(w.startTime._seconds * 1000);
+          dateStr = d.toISOString().slice(0, 10);
+        } else if (w.startTime) {
+          const d = new Date(w.startTime);
+          dateStr = d.toISOString().slice(0, 10);
+        }
+        return dateStr === todayStr;
+      })
+      .reduce((sum, w) => sum + (w.distance || 0), 0);
+  }
+  const todaySteps = Math.round((todayDistanceKm * 1000) / 0.78);
+  const stepsPercent = todaySteps / stepsGoal;
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 100 }}>
@@ -87,7 +110,9 @@ export default function Home() {
           <View style={styles.headerRow}>
             <View>
               <Text style={[styles.welcome, { color: colors.subtext }]}>Welcome Back,</Text>
-              <Text style={[styles.name, { color: colors.text }]}>Name Name</Text>
+              <Text style={[styles.name, { color: colors.text }]}>
+                {user?.first_name || ''} {user?.last_name || ''}
+              </Text>
             </View>
             <TouchableOpacity style={[styles.profileIcon, { backgroundColor: colors.card }] }>
               <MaterialIcons name="person" size={22} color={colors.blue} />
@@ -153,12 +178,12 @@ export default function Home() {
                 />
               </Svg>
               <View style={styles.progressTextContainer}>
-                <Text style={[styles.progressSteps, { color: colors.text }]}>{steps} Steps</Text>
-                <Text style={[styles.progressKm, { color: colors.subtext }]}>{km} KM</Text>
+                <Text style={[styles.progressSteps, { color: colors.text }]}>{todaySteps} Steps</Text>
+                <Text style={[styles.progressKm, { color: colors.subtext }]}> {todayDistanceKm.toFixed(2)} KM</Text>
               </View>
             </View>
             <Text style={[styles.progressSubtext, { color: colors.subtext }] }>
-              {stepsGoal - steps} more steps to complete your daily task
+              {stepsGoal - todaySteps} more steps to complete your daily task
             </Text>
           </View>
 
