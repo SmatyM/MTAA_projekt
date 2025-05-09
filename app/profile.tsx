@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { useTheme } from './config/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from './config/api';
+import { useUser } from './config/UserContext';
 
 // This will be provided by backend later
 const isTrainer = true; // Change to true to see trainer view
@@ -14,6 +15,7 @@ const isTrainer = true; // Change to true to see trainer view
 export default function Profile() {
   const router = useRouter();
   const { darkMode, setDarkMode } = useTheme();
+  const { refreshUser } = useUser();
 
   // State for profile fields
   const [height, setHeight] = React.useState('');
@@ -62,6 +64,7 @@ export default function Profile() {
       });
       if (res.ok) {
         alert('Profile saved!');
+        await refreshUser();
       } else {
         const data = await res.json();
         alert(data.error || 'Failed to save profile');

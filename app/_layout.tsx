@@ -1,13 +1,16 @@
 import { Stack } from 'expo-router';
 import { PaperProvider } from 'react-native-paper';
 import { ThemeProvider } from './config/ThemeContext';
+import { UserProvider } from './config/UserContext';
 
 export default function Layout() {
   return (
     <ThemeProvider>
-      <PaperProvider>
-        <Stack />
-      </PaperProvider>
+      <UserProvider>
+        <PaperProvider>
+          <Stack />
+        </PaperProvider>
+      </UserProvider>
     </ThemeProvider>
   );
 }

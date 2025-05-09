@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { useTheme } from './config/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from './config/api';
+import { useUser } from './config/UserContext';
 
 const BMI = 10.1;
 const steps = 92;
@@ -23,6 +24,7 @@ const workouts = [
 export default function Home() {
   const router = useRouter();
   const { darkMode } = useTheme();
+  const { user, refreshUser } = useUser();
 
   const colors = darkMode
     ? {
@@ -47,6 +49,13 @@ export default function Home() {
         divider: '#E0E0E0',
         white: '#fff',
       };
+
+  // Calculate BMI from user context
+  let bmi: string | number = '--';
+  if (user && user.height && user.weight && user.height > 0) {
+    const heightM = user.height / 100;
+    bmi = (user.weight / (heightM * heightM)).toFixed(1);
+  }
 
   // Fetch workouts from backend
   const [savedWorkouts, setSavedWorkouts] = React.useState<any[]>([]);
@@ -106,14 +115,14 @@ export default function Home() {
                   strokeLinecap="round"
                 />
               </Svg>
-              <Text style={styles.bmiValue}>{BMI}</Text>
+              <Text style={styles.bmiValue}>{bmi}</Text>
             </View>
           </View>
 
           {/* Start Activity Card */}
           <View style={[styles.activityCard, { backgroundColor: colors.card }] }>
             <Text style={[styles.activityLabel, { color: colors.text }]}>Start activity</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push({ pathname: '/activity', params: { autoStart: 'true' } })}>
               <LinearGradient
                 colors={[colors.blue, '#1A1A2E']}
                 start={{ x: 0, y: 0 }}

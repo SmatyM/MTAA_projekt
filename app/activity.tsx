@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from './config/ThemeContext';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,6 +11,9 @@ import MapView, { Marker, Polyline } from 'react-native-maps';
 
 export default function Activity() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const autoStart = params?.autoStart === 'true';
+  const hasAutoStarted = React.useRef(false);
   const { darkMode } = useTheme();
 
   const colors = darkMode
@@ -73,6 +76,13 @@ export default function Activity() {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (autoStart && !tracking && !hasAutoStarted.current) {
+      hasAutoStarted.current = true;
+      handleStart();
+    }
+  }, [autoStart, tracking]);
 
   // Start tracking
   const handleStart = async () => {
