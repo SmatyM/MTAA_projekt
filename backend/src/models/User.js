@@ -77,6 +77,16 @@ module.exports = (sequelize) => {
     date_of_birth: {
       type: DataTypes.DATEONLY,
       allowNull: true
+    },
+    daily_steps_goal: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 5971
+    },
+    daily_distance_goal: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
+      defaultValue: 5.0
     }
   }, {
     tableName: 'users',

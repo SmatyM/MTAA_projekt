@@ -81,7 +81,7 @@ export default function Profile() {
         {/* Header */}
         <View style={styles.headerRow}>
           <Text style={[styles.title, { color: colors.text }]}>Profile</Text>
-          <TouchableOpacity style={[styles.profileIcon, { backgroundColor: colors.card }] }>
+          <TouchableOpacity style={[styles.profileIcon, { backgroundColor: colors.card }] } onPress={() => router.push('/settings')}>
             <MaterialCommunityIcons name="cog-outline" size={22} color={colors.text} />
           </TouchableOpacity>
         </View>

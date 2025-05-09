@@ -100,6 +100,7 @@ export default function Home() {
       .reduce((sum, w) => sum + (w.distance || 0), 0);
   }
   const todaySteps = Math.round((todayDistanceKm * 1000) / 0.78);
+  const stepsGoal = user?.daily_steps_goal || 5971;
   const stepsPercent = todaySteps / stepsGoal;
 
   return (
@@ -114,7 +115,7 @@ export default function Home() {
                 {user?.first_name || ''} {user?.last_name || ''}
               </Text>
             </View>
-            <TouchableOpacity style={[styles.profileIcon, { backgroundColor: colors.card }] }>
+            <TouchableOpacity style={[styles.profileIcon, { backgroundColor: colors.card }] } onPress={() => router.push('/profile')}>
               <MaterialIcons name="person" size={22} color={colors.blue} />
             </TouchableOpacity>
           </View>

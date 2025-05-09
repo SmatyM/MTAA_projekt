@@ -7,7 +7,11 @@ const auth = require('../middleware/auth');
 router.get('/me', auth, async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id, {
-      attributes: ['id', 'email', 'role', 'first_name', 'last_name', 'height', 'weight', 'date_of_birth']
+      attributes: [
+        'id', 'email', 'role', 'first_name', 'last_name',
+        'height', 'weight', 'date_of_birth',
+        'daily_steps_goal', 'daily_distance_goal'
+      ]
     });
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json(user);
@@ -19,12 +23,14 @@ router.get('/me', auth, async (req, res) => {
 // PUT /api/user/me - Update current logged-in user's profile
 router.put('/me', auth, async (req, res) => {
   try {
-    const { height, weight, date_of_birth } = req.body;
+    const { height, weight, date_of_birth, daily_steps_goal, daily_distance_goal } = req.body;
     const user = await User.findByPk(req.user.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (height !== undefined) user.height = height;
     if (weight !== undefined) user.weight = weight;
     if (date_of_birth !== undefined) user.date_of_birth = date_of_birth;
+    if (daily_steps_goal !== undefined) user.daily_steps_goal = daily_steps_goal;
+    if (daily_distance_goal !== undefined) user.daily_distance_goal = daily_distance_goal;
     await user.save();
     res.json({ message: 'Profile updated', user });
   } catch (err) {
