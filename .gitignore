@@ -3,6 +3,9 @@
 # uploady
 /uploads
 
+google-services.json
+
+mtaa-project-42c11-b5e7adefbdaa.json
 
 firebase-service-account.json
 
@@ -42,3 +45,5 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+
+*.json
