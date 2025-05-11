@@ -40,4 +40,18 @@ router.put('/me', auth, async (req, res) => {
   }
 });
 
+// PUT /api/user/push-token - Update user's push notification token
+router.put('/push-token', auth, async (req, res) => {
+  try {
+    const { push_token } = req.body;
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    user.push_token = push_token;
+    await user.save();
+    res.json({ message: 'Push token updated' });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 module.exports = router;

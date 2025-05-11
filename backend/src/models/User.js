@@ -87,6 +87,10 @@ module.exports = (sequelize) => {
       type: DataTypes.FLOAT,
       allowNull: true,
       defaultValue: 5.0
+    },
+    push_token: {
+      type: DataTypes.STRING,
+      allowNull: true
     }
   }, {
     tableName: 'users',

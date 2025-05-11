@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Linking, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { TextInput, Checkbox } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -70,103 +70,110 @@ export default function Register() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }] }>
-      <Text style={[styles.greeting, { color: colors.text }]}>Hey there,</Text>
-      <Text style={[styles.title, { color: colors.text }]}>Create an Account</Text>
-      <View style={[styles.divider, { backgroundColor: colors.divider }]} />
-      <View style={styles.inputContainer}>
-        <TextInput
-          mode="flat"
-          style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text }]}
-          placeholder="First Name"
-          placeholderTextColor={colors.subtext}
-          value={firstName}
-          onChangeText={setFirstName}
-          left={<TextInput.Icon icon={() => <MaterialIcons name="person-outline" size={20} color={colors.icon} />} />}
-          underlineColor="transparent"
-          theme={{ colors: { background: colors.inputBg, text: colors.text } }}
-        />
-        <TextInput
-          mode="flat"
-          style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text }]}
-          placeholder="Last Name"
-          placeholderTextColor={colors.subtext}
-          value={lastName}
-          onChangeText={setLastName}
-          left={<TextInput.Icon icon={() => <MaterialIcons name="person-outline" size={20} color={colors.icon} />} />}
-          underlineColor="transparent"
-          theme={{ colors: { background: colors.inputBg, text: colors.text } }}
-        />
-        <TextInput
-          mode="flat"
-          style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text }]}
-          placeholder="Email"
-          placeholderTextColor={colors.subtext}
-          value={email}
-          onChangeText={setEmail}
-          left={<TextInput.Icon icon={() => <MaterialCommunityIcons name="email-outline" size={20} color={colors.icon} />} />}
-          underlineColor="transparent"
-          theme={{ colors: { background: colors.inputBg, text: colors.text } }}
-        />
-        <TextInput
-          mode="flat"
-          style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text }]}
-          placeholder="Password"
-          placeholderTextColor={colors.subtext}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={!showPassword}
-          left={<TextInput.Icon icon={() => <MaterialIcons name="lock-outline" size={20} color={colors.icon} />} />}
-          right={<TextInput.Icon icon={() => (
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <MaterialIcons name={showPassword ? 'visibility-off' : 'visibility'} size={20} color={colors.icon} />
-            </TouchableOpacity>
-          )} />}
-          underlineColor="transparent"
-          theme={{ colors: { background: colors.inputBg, text: colors.text } }}
-        />
-      </View>
-      <View style={styles.checkboxRow}>
-        <Checkbox.Android
-          status={isTrainer ? 'checked' : 'unchecked'}
-          onPress={() => setIsTrainer(!isTrainer)}
-          color={colors.blue}
-        />
-        <Text style={[styles.checkboxLabel, { color: colors.text }]}>I&apos;m trainer</Text>
-      </View>
-      <View style={styles.checkboxRow}>
-        <Checkbox.Android
-          status={acceptTerms ? 'checked' : 'unchecked'}
-          onPress={() => setAcceptTerms(!acceptTerms)}
-          color={colors.blue}
-        />
-        <Text style={[styles.checkboxLabel, { color: colors.text }] }>
-          By continuing you accept our{' '}
-          <Text style={[styles.link, { color: colors.blue }]} onPress={() => Linking.openURL('https://your-privacy-policy-url.com')}>Privacy Policy</Text>
-          {' '}and{' '}
-          <Text style={[styles.link, { color: colors.blue }]} onPress={() => Linking.openURL('https://your-terms-url.com')}>Term of Use</Text>
-        </Text>
-      </View>
-      <TouchableOpacity style={styles.buttonContainer} onPress={handleRegister}>
-        <LinearGradient
-          colors={[colors.blue, '#1A1A2E']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.button}
-        >
-          <Text style={styles.buttonText}>Register</Text>
-        </LinearGradient>
-      </TouchableOpacity>
-      <View style={styles.orRow}>
-        <View style={[styles.orDivider, { backgroundColor: colors.divider }]} />
-        <Text style={[styles.orText, { color: colors.subtext }]}>Or</Text>
-        <View style={[styles.orDivider, { backgroundColor: colors.divider }]} />
-      </View>
-      <View style={styles.loginRow}>
-        <Text style={[styles.loginText, { color: colors.text }]}>Already have an account? </Text>
-        <Text style={[styles.loginLink, { color: colors.blue }]} onPress={() => router.push('/login')}>Login</Text>
-      </View>
-    </View>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1 }}
+    >
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        <View style={[styles.container, { backgroundColor: colors.background }] }>
+          <Text style={[styles.greeting, { color: colors.text }]}>Hey there,</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Create an Account</Text>
+          <View style={[styles.divider, { backgroundColor: colors.divider }]} />
+          <View style={styles.inputContainer}>
+            <TextInput
+              mode="flat"
+              style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text }]}
+              placeholder="First Name"
+              placeholderTextColor={colors.subtext}
+              value={firstName}
+              onChangeText={setFirstName}
+              left={<TextInput.Icon icon={() => <MaterialIcons name="person-outline" size={20} color={colors.icon} />} />}
+              underlineColor="transparent"
+              theme={{ colors: { background: colors.inputBg, text: colors.text } }}
+            />
+            <TextInput
+              mode="flat"
+              style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text }]}
+              placeholder="Last Name"
+              placeholderTextColor={colors.subtext}
+              value={lastName}
+              onChangeText={setLastName}
+              left={<TextInput.Icon icon={() => <MaterialIcons name="person-outline" size={20} color={colors.icon} />} />}
+              underlineColor="transparent"
+              theme={{ colors: { background: colors.inputBg, text: colors.text } }}
+            />
+            <TextInput
+              mode="flat"
+              style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text }]}
+              placeholder="Email"
+              placeholderTextColor={colors.subtext}
+              value={email}
+              onChangeText={setEmail}
+              left={<TextInput.Icon icon={() => <MaterialCommunityIcons name="email-outline" size={20} color={colors.icon} />} />}
+              underlineColor="transparent"
+              theme={{ colors: { background: colors.inputBg, text: colors.text } }}
+            />
+            <TextInput
+              mode="flat"
+              style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text }]}
+              placeholder="Password"
+              placeholderTextColor={colors.subtext}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              left={<TextInput.Icon icon={() => <MaterialIcons name="lock-outline" size={20} color={colors.icon} />} />}
+              right={<TextInput.Icon icon={() => (
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                  <MaterialIcons name={showPassword ? 'visibility-off' : 'visibility'} size={20} color={colors.icon} />
+                </TouchableOpacity>
+              )} />}
+              underlineColor="transparent"
+              theme={{ colors: { background: colors.inputBg, text: colors.text } }}
+            />
+          </View>
+          <View style={styles.checkboxRow}>
+            <Checkbox.Android
+              status={isTrainer ? 'checked' : 'unchecked'}
+              onPress={() => setIsTrainer(!isTrainer)}
+              color={colors.blue}
+            />
+            <Text style={[styles.checkboxLabel, { color: colors.text }]}>I&apos;m trainer</Text>
+          </View>
+          <View style={styles.checkboxRow}>
+            <Checkbox.Android
+              status={acceptTerms ? 'checked' : 'unchecked'}
+              onPress={() => setAcceptTerms(!acceptTerms)}
+              color={colors.blue}
+            />
+            <Text style={[styles.checkboxLabel, { color: colors.text }] }>
+              By continuing you accept our{' '}
+              <Text style={[styles.link, { color: colors.blue }]} onPress={() => Linking.openURL('https://your-privacy-policy-url.com')}>Privacy Policy</Text>
+              {' '}and{' '}
+              <Text style={[styles.link, { color: colors.blue }]} onPress={() => Linking.openURL('https://your-terms-url.com')}>Term of Use</Text>
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.buttonContainer} onPress={handleRegister}>
+            <LinearGradient
+              colors={[colors.blue, '#1A1A2E']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.button}
+            >
+              <Text style={styles.buttonText}>Register</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <View style={styles.orRow}>
+            <View style={[styles.orDivider, { backgroundColor: colors.divider }]} />
+            <Text style={[styles.orText, { color: colors.subtext }]}>Or</Text>
+            <View style={[styles.orDivider, { backgroundColor: colors.divider }]} />
+          </View>
+          <View style={styles.loginRow}>
+            <Text style={[styles.loginText, { color: colors.text }]}>Already have an account? </Text>
+            <Text style={[styles.loginLink, { color: colors.blue }]} onPress={() => router.push('/login')}>Login</Text>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

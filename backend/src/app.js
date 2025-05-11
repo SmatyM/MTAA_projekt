@@ -50,4 +50,8 @@ app.use(trackRequest);
 
 app.use(errorHandler);
 
+require('./services/dailyReminder');
+
+app.use('/uploads', express.static('uploads'));
+
 module.exports = app;

@@ -76,4 +76,37 @@ router.get('/history', async (req, res) => {
     }
 });
 
+router.put('/edit/:id', authenticate, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { distance, duration } = req.body;
+        const userId = req.user.id;
+
+        // Upraviť workout vo Firestore
+        const updated = await locationService.editUserWorkout(userId, id, { distance, duration });
+        if (!updated) {
+            return res.status(404).json({ error: 'Workout not found or not yours' });
+        }
+        res.json({ message: 'Workout updated' });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+router.delete('/delete/:id', authenticate, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.id;
+
+        // Vymazať workout vo Firestore
+        const deleted = await locationService.deleteUserWorkout(userId, id);
+        if (!deleted) {
+            return res.status(404).json({ error: 'Workout not found or not yours' });
+        }
+        res.json({ message: 'Workout deleted' });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
 module.exports = router;

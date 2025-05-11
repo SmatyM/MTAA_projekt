@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const upload = require('../middleware/upload');
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
 const { Image } = require('../models');
 const authenticateToken = require('../middleware/auth');
 const fs = require('fs');

@@ -52,7 +52,7 @@ const chatRouter = require('./routes/chat');
 app.use('/api/chat', chatRouter);
 
 sequelize.sync().then(() => {
-  server.listen(3000, () => console.log('Server beží na http://localhost:3000'));
+  server.listen(3000, () => console.log('Server beží na http://192.168.1.180:3000'));
 });
 
 app.use((req, res, next) => {

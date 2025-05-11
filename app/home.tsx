@@ -122,8 +122,8 @@ export default function Home() {
     if (!selectedActivity) return;
     setModalLoading(true);
     try {
-      const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`${API_URL}/activities/${selectedActivity.id}`, {
+      const token = await AsyncStorage.getItem('firebaseToken');
+      const res = await fetch(`${API_URL}/tracking/delete/${selectedActivity.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -150,26 +150,27 @@ export default function Home() {
     if (!selectedActivity) return;
     setModalLoading(true);
     try {
-      const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`${API_URL}/activities/${selectedActivity.id}`, {
+      const token = await AsyncStorage.getItem('firebaseToken');
+      const res = await fetch(`${API_URL}/tracking/edit/${selectedActivity.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           distance: editDistance ? parseFloat(editDistance) : undefined,
           duration: editDuration ? parseInt(editDuration) : undefined,
-          startTime: editTime ? new Date(editTime).toISOString() : undefined,
         }),
       });
+      const text = await res.text();
+      console.log('Edit response:', res.status, text);
       if (res.ok) {
         // Update in UI
         setSavedWorkouts((prev) => prev.map((w) =>
           w.id === selectedActivity.id
-            ? { ...w, distance: parseFloat(editDistance), duration: parseInt(editDuration), startTime: new Date(editTime) }
+            ? { ...w, distance: parseFloat(editDistance), duration: parseInt(editDuration) }
             : w
         ));
         setModalVisible(false);
       } else {
-        alert('Failed to update activity');
+        alert('Failed to update activity: ' + text);
       }
     } catch (err) {
       alert('Network error');

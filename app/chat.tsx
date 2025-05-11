@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { API_URL } from './config/api';
 import { useLocalSearchParams } from 'expo-router';
 import io from 'socket.io-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function Chat() {
   let { trainerId } = useLocalSearchParams();
@@ -162,6 +163,76 @@ export default function Chat() {
   const myId = userId;
   const partnerId = trainerId;
 
+  const pickAndSendImage = async () => {
+    // Požiadaj o povolenie
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissionResult.granted) {
+      alert('Permission to access camera roll is required!');
+      return;
+    }
+
+    // Vyber obrázok
+    const pickerResult = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.7,
+    });
+
+    if (pickerResult.canceled) return;
+
+    const image = pickerResult.assets[0];
+    const uri = image.uri;
+
+    // Priprav FormData na upload
+    const formData = new FormData();
+    formData.append('image', {
+      uri,
+      name: 'chat-image.jpg',
+      type: 'image/jpeg',
+    } as any);
+
+    // Nahraj obrázok na backend
+    const token = await AsyncStorage.getItem('token');
+    const res = await fetch(`${API_URL}/images`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const text = await res.text();
+    console.log(res.status, text);
+    if (res.ok) {
+      const data = JSON.parse(text);
+      await sendImageMessage(data.path);
+    } else {
+      alert('Image upload failed: ' + text);
+    }
+  };
+
+  const sendImageMessage = async (imagePath: string) => {
+    const token = await AsyncStorage.getItem('token');
+    const res = await fetch(`${API_URL}/chat/${trainerId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ content: `[image]${imagePath}` })
+    });
+    // ...rest of your logic (socket, fetchMessages, etc.)
+  };
+
+  const getImageUrl = (content: string) => {
+    const path = content.replace('[image]', '');
+    // Remove leading slash if present
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+    // Remove '/api' from API_URL if present
+    const baseUrl = API_URL.replace('/api', '');
+    return `${baseUrl}/${cleanPath}`;
+  };
+
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#fff' }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <FlatList
@@ -169,7 +240,6 @@ export default function Chat() {
         data={messages}
         keyExtractor={item => item.id?.toString() || Math.random().toString()}
         renderItem={({ item }) => {
-          
           return (
             <View style={[
               styles.messageRow,
@@ -177,8 +247,10 @@ export default function Chat() {
                 ? styles.userMsg
                 : styles.trainerMsg
             ]}>
-              <Text>{item.content}</Text>
-              
+              {item.content.startsWith('[image]')
+                ? <Image source={{ uri: getImageUrl(item.content) }} style={{ width: 200, height: 200 }} />
+                : <Text>{item.content}</Text>
+              }
             </View>
           );
         }}
@@ -194,6 +266,9 @@ export default function Chat() {
         />
         <TouchableOpacity style={styles.sendBtn} onPress={sendMessage}>
           <Text style={{ color: '#fff' }}>Odoslať</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={pickAndSendImage}>
+          <Text>📷</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

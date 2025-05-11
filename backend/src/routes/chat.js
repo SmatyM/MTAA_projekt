@@ -3,6 +3,7 @@ const router = express.Router();
 const { Message, User } = require('../models');
 const auth = require('../middleware/auth');
 const { Op } = require('sequelize');
+const { sendPushNotification } = require('../services/notificationService');
 
 // Všetky endpointy v tomto routeri budú chránené
 router.use(auth);
@@ -106,6 +107,15 @@ router.post('/:recipientId', async (req, res) => {
       receiver_id: recipientId,
       seen: 'false'
     });
+    const recipient = await User.findByPk(recipientId);
+    if (recipient && recipient.push_token) {
+      await sendPushNotification(
+        recipient.push_token,
+        'New Message',
+        `You have a new message from ${req.user.first_name || 'someone'}`,
+        { type: 'message', senderId: userId }
+      );
+    }
     res.status(201).json(message);
   } catch (err) {
     res.status(500).json({ error: 'Chyba pri odosielaní správy' });

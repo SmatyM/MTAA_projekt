@@ -28,9 +28,11 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 // PUT aktualizácia aktivity
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateToken, async (req, res) => {
   try {
     console.log('PUT /activities/:id', req.params.id, req.body);
+    const activity = await Activity.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+    if (!activity) return res.status(404).json({ error: 'Aktivita neexistuje alebo nemáte oprávnenie' });
     const updateData = {};
     if (req.body.distance !== undefined) updateData.distance = req.body.distance;
     if (req.body.duration !== undefined) updateData.duration = req.body.duration;

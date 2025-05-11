@@ -85,6 +85,22 @@ class LocationService {
             throw error;
         }
     }
+
+    async editUserWorkout(userId, workoutId, updateData) {
+        const workoutRef = this.db.collection('workouts').doc(workoutId);
+        const doc = await workoutRef.get();
+        if (!doc.exists || doc.data().userId !== userId) return false;
+        await workoutRef.update(updateData);
+        return true;
+    }
+
+    async deleteUserWorkout(userId, workoutId) {
+        const workoutRef = this.db.collection('workouts').doc(workoutId);
+        const doc = await workoutRef.get();
+        if (!doc.exists || doc.data().userId !== userId) return false;
+        await workoutRef.delete();
+        return true;
+    }
 }
 
 module.exports = new LocationService();
